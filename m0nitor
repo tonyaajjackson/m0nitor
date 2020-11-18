@@ -9,10 +9,11 @@ if [[ "$#" -eq 0 ]]; then
     echo "m0nitor: a script for alerting via discord if a host goes online or offfline."
     echo "Arguments are required unless otherwise specified"
     echo ""
+    echo "-d/--debug (opt.)         Prints debug messages during run"
+    echo "--max-ping-fails (opt.)   Number of times ping can fail before an alert is sent"
     echo "--host                    IP address or fully qualified domain name of host"
     echo "--server-name             Name of server in alert"
     echo "--webhook                 Discord webhook URL"
-    echo "-d/--debug (optional)     Prints debug messages during run"
     exit 0
 fi
 
@@ -27,6 +28,15 @@ while (( "$#" )); do
         --host)
             if [ -n "$2" ] && [ ${2:0:1} != "-" ]; then
                 host=$2
+                shift 2
+            else
+                echo "Error: Argument for $1 is missing" >&2
+                exit 1
+            fi
+            ;;
+        --max-ping-fails)
+            if [ -n "$2" ] && [ ${2:0:1} != "-" ]; then
+                max_fails=$2
                 shift 2
             else
                 echo "Error: Argument for $1 is missing" >&2
@@ -72,6 +82,11 @@ if [[ -z ${host+x} ]]; then
     exit 1
 fi
 
+if [[ -z ${max_fails+x} ]]; then
+    echo "--ping-max-fails not specified. Setting max_fails=1"
+    max_fails=1
+fi
+
 if [[ -z ${server_name+x} ]]; then
     echo "--server-name not specified. Please provide a name for this server to be included in alert messages."
     exit 1
@@ -91,54 +106,55 @@ statefile="$cachepath$host"
 
 # Use negative form of booleans so 0 is good and 1 is bad to match unix command exit codes
 if [ -f "$statefile" ]; then
-    missing_statefile=0
-    read -r is_down <"$statefile"
-    $debug_echo "Read value is_down=$is_down from statefile in $statefile"
+    read -r fail_count <"$statefile"
+    $debug_echo "Read value fail_count=$fail_count from statefile in $statefile"
 
-    if [[ $is_down != 0 ]] && [[ $is_down != 1 ]]; then
-    $debug_echo "Invalid state is_down=$is_down. Setting is_down=1 to assume server is offline"
-    is_down=1
+    num_regex='^[0-9]+$'
+    if ! [[ $fail_count =~ $num_regex ]]; then
+        $debug_echo "Invalid state fail_count=$fail_count. Setting fail_count=1 to assume server is offline"
+        fail_count=1
     else
         $debug_echo "State is valid"
     fi
 else
-    missing_statefile=1
-    $debug_echo "Could not find statefile in $statefile. Setting is_down=1 to assume server is offline."
-    is_down=1
+    $debug_echo "Could not find statefile in $statefile. Setting fail_count=-1 to mark first run."
+    fail_count=-1
 fi
 
 ping_failure=$( ping -c 1 $host 2>&1 >/dev/null )$?
 
-if [[ $is_down = 0 ]] && [[ $ping_failure = 0 ]]; then
-    $debug_echo "Server is still online"
-
-elif [[ $is_down = 1 ]] && [[ $ping_failure = 1 ]]; then
-    $debug_echo "Server is still offline"
-    
-    if [[ $missing_statefile == 1 ]]; then
-        msg="m0nitor startup: $server_name is offline."
+if [[ $ping_failure = 0 ]]; then
+    $debug_echo "Succesfully pinged $server"
+    if [[ $fail_count -eq -1 ]]; then
+        msg="m0nitor first run: $server_name is online."
         $debug_echo $msg
         curl -H "Content-Type: application/json" -X POST -d "{\"content\":\"$msg\"}" $webhook
-        
-        $debug_echo "Creating new statefile in $statefile"
-        printf 1 > "$statefile"
-    fi
+        printf 0 > "$statefile"
 
-elif [[ $is_down = 0 ]] && [[ $ping_failure = 1 ]]; then
-    msg="$server_name has gone offline"
-    $debug_echo $msg
-    curl -H "Content-Type: application/json" -X POST -d "{\"content\":\"$msg\"}" $webhook
-    printf 1 > "$statefile"
-
-elif [[ $is_down = 1 ]] && [[ $ping_failure = 0 ]]; then
-    if [[ $missing_statefile == 1 ]]; then
-        msg="m0nitor startup: $server_name is online."
-        $debug_echo $msg
-        curl -H "Content-Type: application/json" -X POST -d "{\"content\":\"$msg\"}" $webhook
-    else
+    elif [[ $fail_count != 0 ]]; then
         msg="$server_name is back online"
         $debug_echo $msg
         curl -H "Content-Type: application/json" -X POST -d "{\"content\":\"$msg\"}" $webhook
+        printf 0 > "$statefile"
+
+    else
+        $debug_echo "Server is still online"
     fi
-    printf 0 > "$statefile"
+
+else
+    $debug_echo "Failed to ping $server"
+
+    if [[ $fail_count -eq -1 ]]; then
+        msg="m0nitor first run: $server_name is offline."
+        $debug_echo $msg
+        curl -H "Content-Type: application/json" -X POST -d "{\"content\":\"$msg\"}" $webhook
+        printf 1 > "$statefile"
+        exit 0
+
+    elif [[ $fail_count -eq $max_fails ]]; then
+        msg="$server_name has been offline for $max_fails pings"
+        $debug_echo $msg
+        curl -H "Content-Type: application/json" -X POST -d "{\"content\":\"$msg\"}" $webhook
+    fi
+    printf $(($fail_count + 1)) > "$statefile"
 fi
