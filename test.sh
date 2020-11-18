@@ -37,7 +37,7 @@ eval set -- "$PARAMS"
 
 for x in {0..3}
 do
-    m0nitor --host 8.8.8.8 --server-name Google --debug --webhook $webhook
+    m0nitor --host 8.8.8.8 --server-name Google --debug --webhook $webhook --max-ping-fails 3
     echo ""
 done
 
