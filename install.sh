@@ -1,4 +1,14 @@
 cachepath="/var/cache/m0nitor/"
+
+if [[ $1 == "--uninstall" ]]; then
+    echo "Removing /var/cache/m0nitor/"
+    sudo rm -r /var/cache/m0nitor/
+    echo "Removing /usr/bin/m0nitor"
+    sudo rm /usr/bin/m0nitor
+    echo "Uninstall finished"
+    exit 0
+fi
+
 if ! [[ -d $cachepath ]]; then
     echo "Creating $cachepath"
     sudo mkdir /var/cache/m0nitor/
