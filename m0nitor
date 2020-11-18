@@ -87,7 +87,7 @@ if [[ -z ${debug_echo+x} ]]; then
 fi
 
 
-statefile="$cachepath$is_down_$host"
+statefile="$cachepath$host"
 
 # Use negative form of booleans so 0 is good and 1 is bad to match unix command exit codes
 if [ -f "$statefile" ]; then
