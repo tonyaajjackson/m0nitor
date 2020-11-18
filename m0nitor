@@ -77,6 +77,11 @@ if [[ -z ${server_name+x} ]]; then
     exit 1
 fi
 
+if [[ -z ${webhook+x} ]]; then
+    echo "--webhook not specified. Please provide a webhook URL to send alerts to."
+    exit 1
+fi
+
 if [[ -z ${debug_echo+x} ]]; then
     debug_echo=":"
 fi
