@@ -1,5 +1,10 @@
 cachepath="/var/cache/m0nitor/"
 
+if [[ $1 == "--reinstall" ]]; then
+    ./install.sh --uninstall
+    ./install.sh
+fi
+
 if [[ $1 == "--uninstall" ]]; then
     echo "Removing /var/cache/m0nitor/"
     sudo rm -r /var/cache/m0nitor/
