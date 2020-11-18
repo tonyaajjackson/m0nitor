@@ -127,13 +127,13 @@ if [[ $ping_failure = 0 ]]; then
     $debug_echo "Succesfully pinged $server"
     if [[ $fail_count -eq -1 ]]; then
         msg="m0nitor first run: $server_name is online."
-        $debug_echo $msg
+        $debug_echo "Sending webhook message: \"$msg\""
         curl -H "Content-Type: application/json" -X POST -d "{\"content\":\"$msg\"}" $webhook
         printf 0 > "$statefile"
 
     elif [[ $fail_count != 0 ]]; then
         msg="$server_name is back online"
-        $debug_echo $msg
+        $debug_echo " Sending webhook message: \"$msg\""
         curl -H "Content-Type: application/json" -X POST -d "{\"content\":\"$msg\"}" $webhook
         printf 0 > "$statefile"
 
@@ -146,14 +146,14 @@ else
 
     if [[ $fail_count -eq -1 ]]; then
         msg="m0nitor first run: $server_name is offline."
-        $debug_echo $msg
+        $debug_echo "Sending webhook message: \"$msg\""
         curl -H "Content-Type: application/json" -X POST -d "{\"content\":\"$msg\"}" $webhook
         printf 1 > "$statefile"
         exit 0
 
     elif [[ $fail_count -eq $max_fails ]]; then
         msg="$server_name has been offline for $max_fails pings"
-        $debug_echo $msg
+        $debug_echo "Sending webhook message: \"$msg\""
         curl -H "Content-Type: application/json" -X POST -d "{\"content\":\"$msg\"}" $webhook
     fi
     printf $(($fail_count + 1)) > "$statefile"
