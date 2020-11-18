@@ -138,9 +138,6 @@ if [[ $ping_failure = 0 ]]; then
         $debug_echo " Sending webhook message: \"$msg\""
         curl -H "Content-Type: application/json" -X POST -d "{\"content\":\"$msg\"}" $webhook
         printf 0 > "$statefile"
-
-    else
-        $debug_echo "Server is still online"
     fi
 
 else
