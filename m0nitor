@@ -82,11 +82,6 @@ if [[ -z ${host+x} ]]; then
     exit 1
 fi
 
-if [[ -z ${max_fails+x} ]]; then
-    echo "--ping-max-fails not specified. Setting max_fails=1"
-    max_fails=1
-fi
-
 if [[ -z ${server_name+x} ]]; then
     echo "--server-name not specified. Please provide a name for this server to be included in alert messages."
     exit 1
@@ -99,6 +94,13 @@ fi
 
 if [[ -z ${debug_echo+x} ]]; then
     debug_echo=":"
+fi
+
+$debug_echo $(date --iso-8601="seconds")
+
+if [[ -z ${max_fails+x} ]]; then
+    echo "--ping-max-fails not specified. Setting max_fails=1"
+    max_fails=1
 fi
 
 
