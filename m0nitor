@@ -133,7 +133,7 @@ if [[ $ping_failure = 0 ]]; then
         curl -H "Content-Type: application/json" -X POST -d "{\"content\":\"$msg\"}" $webhook
         printf 0 > "$statefile"
 
-    elif [[ $fail_count != 0 ]]; then
+    elif [[ $fail_count -ge $max_fails ]]; then
         msg="$server_name is back online"
         $debug_echo " Sending webhook message: \"$msg\""
         curl -H "Content-Type: application/json" -X POST -d "{\"content\":\"$msg\"}" $webhook
